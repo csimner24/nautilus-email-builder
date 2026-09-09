@@ -65,13 +65,46 @@ Open [http://localhost:3000](http://localhost:3000).
 | `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
 | `RESEND_FROM_EMAIL` | Sender email address (default: `onboarding@resend.dev`) |
 | `TEMPORAL_ADDRESS` | Temporal server address (default: `localhost:7233`) |
+| `TEMPORAL_NAMESPACE` | Temporal namespace (default: `default`) |
 
 ### Temporal (for scheduling)
 
 ```bash
 # Install Temporal CLI: https://docs.temporal.io/cli
-temporal server start-dev
+temporal server start-dev --db-filename temporal.db
+
+# In a second terminal:
+npm run worker
 ```
+
+The worker loads `.env.local` automatically and exits before polling if
+`RESEND_API_KEY` is missing. Its startup log shows the Temporal address,
+namespace, and task queue it is using.
+
+If a scheduled send is not visible at [http://localhost:8233](http://localhost:8233):
+
+- Open **Workflows**, not Temporal's **Schedules** page. This app implements
+  scheduling with a durable workflow timer.
+- Select the same namespace configured by `TEMPORAL_NAMESPACE` (`default` unless
+  changed) and clear workflow status filters.
+- Confirm the Next.js app and worker use the same `TEMPORAL_ADDRESS` and
+  `TEMPORAL_NAMESPACE`.
+- Run Temporal, Next.js, and the worker in the same Windows or WSL environment
+  when using `localhost`. WSL's `localhost` may not reach a Temporal server
+  started on Windows; in that case, run Temporal inside WSL or configure all
+  processes to use the reachable Windows host address.
+- A workflow that already exhausted its retries remains failed after the worker
+  configuration is fixed; create a new scheduled send to test again.
+
+Scheduling is a local-development feature in this demo. The editor, browser-local
+CRM, previews, and immediate Resend delivery can be deployed to Vercel directly.
+
+### Vercel
+
+Import the GitHub repository in Vercel and configure `RESEND_API_KEY` and
+`RESEND_FROM_EMAIL` in the project environment variables. Use a verified Resend
+domain for delivery to recipients other than the Resend account owner. The
+Scheduled send tab displays local Temporal startup instructions on Vercel.
 
 ## Requirements
 

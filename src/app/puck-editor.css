@@ -1,0 +1,611 @@
+.nautilus-puck-shell {
+  --nautilus-border: #eaeaea;
+  --nautilus-canvas: #fafafa;
+  --nautilus-hover: #f2f2f2;
+  --nautilus-muted: #666666;
+  --nautilus-text: #171717;
+  background: var(--nautilus-canvas);
+  color: var(--nautilus-text);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  height: 100%;
+}
+
+/* Vercel-inspired neutral chrome, scoped to the editor. */
+.nautilus-puck-shell [class*="PuckHeader-"],
+.nautilus-puck-shell [class*="PuckCanvas-controls"],
+.nautilus-puck-shell [class*="PuckLayout-leftSideBar"],
+.nautilus-puck-shell [class*="PuckLayout-rightSideBar"],
+.nautilus-puck-shell [class*="Sidebar-"] {
+  background: #ffffff;
+  border-color: var(--nautilus-border);
+  color: var(--nautilus-text);
+}
+
+.nautilus-puck-shell [class*="PuckCanvas-"] {
+  border-color: var(--nautilus-border);
+}
+
+.nautilus-puck-shell [class*="PuckCanvas-inner"],
+.nautilus-puck-shell [class*="PuckCanvas-root"] {
+  background: var(--nautilus-canvas);
+}
+
+.nautilus-puck-shell [class*="PuckCanvas-frame"] {
+  background: #ffffff;
+  border: 1px solid var(--nautilus-border);
+  border-radius: 6px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.nautilus-puck-shell [class*="PuckCanvas-frame"] iframe {
+  background: #ffffff;
+}
+
+.nautilus-puck-shell [class*="SidebarSection-"],
+.nautilus-puck-shell [class*="ComponentList-"],
+.nautilus-puck-shell [class*="Fields-"] {
+  border-color: var(--nautilus-border);
+}
+
+.nautilus-puck-shell input,
+.nautilus-puck-shell textarea,
+.nautilus-puck-shell select {
+  background: #ffffff;
+  border-color: var(--nautilus-border);
+  border-radius: 6px;
+  color: var(--nautilus-text);
+}
+
+.nautilus-puck-shell input:focus,
+.nautilus-puck-shell textarea:focus,
+.nautilus-puck-shell select:focus,
+.nautilus-puck-shell button:focus-visible {
+  border-color: var(--nautilus-text);
+  outline: 2px solid var(--nautilus-text);
+  outline-offset: 2px;
+}
+
+.nautilus-puck-shell button {
+  border-radius: 6px;
+}
+
+.nautilus-puck-shell button:not(:disabled):hover,
+.nautilus-puck-shell [class*="ComponentItem-"]:hover {
+  background-color: var(--nautilus-hover);
+}
+
+.nautilus-puck-shell [class*="Button-primary"],
+.nautilus-puck-shell [class*="Button--primary"] {
+  background: var(--nautilus-text);
+  border-color: var(--nautilus-text);
+  color: #ffffff;
+}
+
+.nautilus-puck-shell [class*="Button-primary"]:not(:disabled):hover,
+.nautilus-puck-shell [class*="Button--primary"]:not(:disabled):hover {
+  background: #383838;
+  border-color: #383838;
+}
+
+.nautilus-puck-shell button:disabled {
+  color: #a1a1a1;
+}
+
+/* The properties panel stays open; only the left catalog is collapsible. */
+.nautilus-puck-shell [class*="PuckHeader-rightSideBarToggle"] {
+  display: none !important;
+}
+
+/* Replaced by the adjacent < and > controls in the header actions. */
+.nautilus-puck-shell [class*="MenuBar-history"] {
+  display: none !important;
+}
+
+.nautilus-header-actions,
+.nautilus-history-actions {
+  align-items: center;
+  display: flex;
+}
+
+.nautilus-header-actions {
+  gap: 8px;
+}
+
+.nautilus-history-actions {
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.nautilus-editor-pane {
+  height: 100vh;
+}
+
+/*
+ * Puck has no public child slot for ViewportControls. The editor-shell override
+ * portals the public-API selection actions into this existing control band.
+ */
+.nautilus-puck-shell [class*="PuckCanvas-controls"] {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  min-height: 38px;
+}
+
+.nautilus-puck-shell
+  [class*="PuckCanvas-controls"]
+  > [class*="ViewportControls"] {
+  grid-column: 2;
+  justify-self: center;
+}
+
+/* Keep viewport and +/- controls, but remove Puck's percentage dropdown. */
+.nautilus-puck-shell [class*="ViewportControls-zoom"] {
+  display: none !important;
+}
+
+.nautilus-selection-toolbar {
+  grid-column: 3;
+  justify-self: end;
+  min-width: 0;
+  padding-left: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.nautilus-selection-toolbar [class*="ActionBar-label"] {
+  max-width: 140px;
+  overflow: hidden;
+}
+
+/*
+ * The preview covers a still-mounted editor (so Puck keeps its undo history),
+ * so it is a fixed overlay rather than a replacement view.
+ */
+.nautilus-page-preview {
+  --nautilus-preview-header-height: 56px;
+  background: #fafafa;
+  color: #171717;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  inset: 0;
+  overflow-y: auto;
+  position: fixed;
+  z-index: 9000;
+}
+
+.nautilus-preview-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #eaeaea;
+  color: #171717;
+  display: flex;
+  height: var(--nautilus-preview-header-height);
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.nautilus-preview-header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.nautilus-preview-header button {
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  color: #171717;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 14px;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.nautilus-preview-header button:hover {
+  background: #f2f2f2;
+  border-color: #d4d4d4;
+}
+
+.nautilus-preview-header button:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 2px;
+}
+
+.nautilus-preview-surface {
+  box-sizing: border-box;
+  min-height: calc(100vh - var(--nautilus-preview-header-height));
+  overflow-x: auto;
+  padding: 24px;
+}
+
+.nautilus-preview-stage {
+  margin: 0 auto;
+  width: max-content;
+}
+
+.nautilus-preview-frame {
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-sizing: content-box;
+  display: block;
+  height: 900px;
+}
+
+.nautilus-crash-notice {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  color: #171717;
+  display: flex;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-size: 14px;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 24px auto;
+  max-width: 480px;
+  padding: 16px;
+}
+
+.nautilus-crash-notice p {
+  margin: 0;
+}
+
+.nautilus-crash-notice button {
+  background: #171717;
+  border: 1px solid #171717;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .nautilus-selection-toolbar [class*="ActionBar-label"] {
+    display: none;
+  }
+}
+
+.send-dialog__overlay {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.34);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 10000;
+}
+
+.send-dialog {
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  color: #171717;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  max-height: min(780px, calc(100vh - 48px));
+  overflow: hidden;
+  width: min(680px, 100%);
+}
+
+.send-dialog__header,
+.send-dialog__section-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.send-dialog__header {
+  padding: 20px 22px 16px;
+}
+
+.send-dialog__header h2,
+.send-dialog__section-heading h3,
+.send-dialog__contacts h3 {
+  margin: 0;
+}
+
+.send-dialog__header h2 {
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.send-dialog__eyebrow {
+  color: #666666;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 0 2px;
+  text-transform: uppercase;
+}
+
+.send-dialog__close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #666666;
+  cursor: pointer;
+  display: flex;
+  font-size: 24px;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.send-dialog__close:hover {
+  background: #f2f2f2;
+  color: #171717;
+}
+
+.send-dialog__tabs {
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  gap: 4px;
+  padding: 0 22px;
+}
+
+.send-dialog__tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #666666;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: -1px;
+  padding: 10px 12px;
+}
+
+.send-dialog__tabs button.is-active {
+  border-bottom-color: #171717;
+  color: #171717;
+}
+
+.send-dialog__body {
+  max-height: calc(min(780px, 100vh - 48px) - 126px);
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.send-dialog__form {
+  display: grid;
+  gap: 14px;
+}
+
+.send-dialog__form label {
+  color: #383838;
+  display: grid;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+}
+
+.send-dialog__form input,
+.send-dialog__form textarea {
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  color: #171717;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 10px;
+  resize: vertical;
+}
+
+.send-dialog__form input:focus,
+.send-dialog__form textarea:focus,
+.send-dialog button:focus-visible {
+  border-color: #171717;
+  outline: 2px solid #171717;
+  outline-offset: 2px;
+}
+
+.send-dialog__primary {
+  background: #171717;
+  border: 1px solid #171717;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  justify-self: end;
+  padding: 9px 16px;
+}
+
+.send-dialog__primary:hover:not(:disabled) {
+  background: #383838;
+}
+
+.send-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.send-dialog__hint,
+.send-dialog__empty,
+.send-dialog__temporal-note {
+  color: #666666;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.send-dialog__crm-flag {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 6px;
+  justify-self: start;
+  padding: 4px 8px;
+}
+
+.send-dialog__crm-flag--found {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.send-dialog__crm-flag--missing {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.send-dialog__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.send-dialog__notice {
+  border: 1px solid;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  padding: 9px 10px;
+}
+
+.send-dialog__notice--success {
+  background: #ecfdf3;
+  border-color: #abefc6;
+  color: #067647;
+}
+
+.send-dialog__notice--error {
+  background: #fef3f2;
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.send-dialog__schedules,
+.send-dialog__contacts {
+  border-top: 1px solid #eaeaea;
+  margin-top: 22px;
+  padding-top: 18px;
+}
+
+.send-dialog__section-heading h3,
+.send-dialog__contacts h3 {
+  font-size: 14px;
+}
+
+.send-dialog__section-heading button,
+.send-dialog__schedules li button {
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.send-dialog__schedules ul,
+.send-dialog__contacts ul {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.send-dialog__schedules li {
+  align-items: center;
+  background: #fafafa;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.send-dialog__schedules li div,
+.send-dialog__contacts li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.send-dialog__schedules li strong,
+.send-dialog__contacts li strong {
+  font-size: 13px;
+}
+
+.send-dialog__schedules li span,
+.send-dialog__contacts li span {
+  color: #666666;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.send-dialog__temporal-note {
+  background: #fafafa;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.send-dialog__field-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.send-dialog__field-grid label:first-child {
+  grid-column: 1 / -1;
+}
+
+.send-dialog__contacts {
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+@media (max-width: 560px) {
+  .send-dialog__overlay {
+    padding: 12px;
+  }
+
+  .send-dialog__tabs {
+    padding: 0 12px;
+  }
+
+  .send-dialog__tabs button {
+    padding-inline: 8px;
+  }
+
+  .send-dialog__body {
+    padding: 16px;
+  }
+
+  .send-dialog__field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .send-dialog__field-grid label:first-child {
+    grid-column: auto;
+  }
+}

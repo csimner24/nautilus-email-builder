@@ -6,13 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "worker": "npx --yes tsx src/temporal/worker.ts"
   },
   "dependencies": {
+    "@next/env": "16.1.6",
     "@puckeditor/core": "^0.21.1",
     "@react-email/components": "^1.0.9",
     "@temporalio/activity": "^1.15.0",
     "@temporalio/client": "^1.15.0",
+    "@temporalio/common": "^1.15.0",
     "@temporalio/worker": "^1.15.0",
     "@temporalio/workflow": "^1.15.0",
     "next": "16.1.6",
@@ -31,5 +35,27 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@tiptap/core": "3.20.4",
+    "@tiptap/extension-blockquote": "3.20.4",
+    "@tiptap/extension-bold": "3.20.4",
+    "@tiptap/extension-code": "3.20.4",
+    "@tiptap/extension-code-block": "3.20.4",
+    "@tiptap/extension-document": "3.20.4",
+    "@tiptap/extension-hard-break": "3.20.4",
+    "@tiptap/extension-heading": "3.20.4",
+    "@tiptap/extension-horizontal-rule": "3.20.4",
+    "@tiptap/extension-italic": "3.20.4",
+    "@tiptap/extension-link": "3.20.4",
+    "@tiptap/extension-list": "3.20.4",
+    "@tiptap/extension-paragraph": "3.20.4",
+    "@tiptap/extension-strike": "3.20.4",
+    "@tiptap/extension-text": "3.20.4",
+    "@tiptap/extension-text-align": "3.20.4",
+    "@tiptap/extension-underline": "3.20.4",
+    "@tiptap/html": "3.20.4",
+    "@tiptap/pm": "3.20.4",
+    "@tiptap/react": "3.20.4"
   }
 }

@@ -58,27 +58,34 @@ with Temporal for durable scheduling.
   sent email.
 - Flow:
   ```
-  Puck data (JSON) ──> <Render config data> ──> @react-email/render ──> HTML ──> Resend
+  Puck data (JSON) ──> <Render config data> ──> react-dom/server ──> HTML ──> Resend
           ▲                                                                   │
           └──────────── same config powers the on-screen canvas ─────────────┘
   ```
 - **Server-side render:** the HTML string for the email is produced in the API route
-  (`@react-email/render`, which is async in React Email v1+), not in the browser.
-  This keeps output email-safe and env-secure.
+  with `renderToStaticMarkup`, matching the preview renderer and ensuring Puck and
+  React DOM share Next.js's React instance. This keeps output env-secure and avoids
+  duplicate-renderer hook failures.
 
 ### 3.3 Editor + Preview UI — one page with a toggle
 - Single page with `mode: 'edit' | 'preview'` state.
 - **Edit:** mount `<Puck config data onChange={setData} />` (the `onChange` keeps
   `data` live so preview is real-time).
-- **Preview:** mount `<Render config data />` inside a **fixed-width container**
-  (no palette/sidebar). The same container doubles as the **desktop/mobile width
-  toggle** (600px vs 375px).
+- **Preview:** render `<Render config data />` to static markup and show the same
+  email in **600px and 375px iframes**. Separate iframe viewports ensure the email's
+  mobile media queries (including column stacking) run accurately.
+- **Hybrid root:** Puck edit mode uses a lightweight, valid DOM shell; read-only
+  `<Render>` uses the full `EmailLayout` document for preview/send parity.
+- Draft Puck data is persisted to `localStorage` so refreshes do not discard work.
 - We are **not** making the Puck editor itself work on mobile (out of scope / overkill).
 
 ### 3.4 Send UI
-- A send component sits next to the preview: a dropdown/panel containing
-  **recipient**, **subject**, **timing** (send now vs. a scheduled time → Temporal),
-  and the final **send** button.
+- Puck's default Publish action is replaced by **Send**, which opens a centered,
+  blurred-background dialog with **Send now**, **Scheduled send**, and **CRM** tabs.
+- Send now accepts one recipient; scheduled send accepts multiple recipients plus
+  a date/time and includes the Temporal-backed schedule list and cancellation.
+- The demo CRM is client-side, seeded from `src/lib/crm.ts`, and persisted to
+  `localStorage`. Recipient indicators show green/red CRM membership immediately.
 - Status notifications (success/error) surface from the API response.
 
 ### 3.5 Puck is headless — we build all components
@@ -95,12 +102,18 @@ with Temporal for durable scheduling.
   (serverless). It must run elsewhere: **Railway / Fly.io / Render / local machine**.
 - Temporal **Server**: local dev via `temporal server start-dev`; Temporal Cloud
   ($1,000 free credits / 90 days) only if we host scheduling for a deployed demo.
+- For this take-home, scheduling is a **local-development feature**. The Vercel
+  deployment supports the builder, CRM, preview, and immediate Resend delivery;
+  the Scheduled tab displays local Temporal startup instructions when unavailable.
 
 ---
 
-## 4. Components to Build
+## 4. Component Catalog — Complete
 
 Draggable Puck blocks, each wrapping React Email primitive(s).
+
+All eight blocks, their Puck sidebar fields/defaults, the root settings, and the
+`ColumnsBlock`/`SectionBlock` slots are implemented.
 
 | Block | React Email primitive(s) | Type | Notes |
 |---|---|---|---|
@@ -172,21 +185,25 @@ ColumnsBlock: {
 
 ---
 
-## 5. Proposed File Structure
+## 5. File Structure and Status
 
-| File | Purpose | Requirement |
+| File | Purpose | Status |
 |---|---|---|
-| `puck.config.tsx` | Component definitions + fields + root config | Tier 1 #1, #2 |
-| `components/email/*.tsx` | React Email components used in `render` (optional; can inline) | Tier 1 #1 |
-| `app/page.tsx` | Editor + preview (mode toggle) + send panel | Tier 1 #1, #3, #4 |
-| `app/api/send/route.ts` | Render Puck data → HTML → Resend (send now) | Tier 1 #4 |
-| `app/api/schedule/route.ts` | Start Temporal workflow (scheduled send) | Tier 2 |
-| `app/api/schedule/cancel/route.ts` | Signal workflow to cancel | Tier 2 |
-| `lib/resend.ts` | Resend client init from env | Tier 1 #4 |
-| `lib/temporal/client.ts` | Temporal client connection | Tier 2 |
-| `temporal/workflows.ts` | `scheduleEmailWorkflow` (sleep-until + cancel signal) | Tier 2 |
-| `temporal/activities.ts` | `sendEmailActivity` (calls Resend) | Tier 2 |
-| `temporal/worker.ts` | Long-running worker process | Tier 2 |
+| `src/puck.config.tsx` | All block fields/defaults/renders, slots, and hybrid root config | **Done** |
+| `src/components/email/*.tsx` | Email layout, theme, sample, and React Email blocks | **Done** |
+| `src/app/page.tsx` | Puck editor, edit/preview mode, live data, draft persistence | **Done** |
+| `src/app/EmailPreview.tsx` | Full-document desktop/mobile iframe previews | **Done** |
+| `src/app/dev/preview/*` | Standalone static component preview harness | **Done** |
+| `src/components/send/SendDialog.tsx` | Send now, scheduling/list/cancel, and CRM tab UI | **Done** |
+| `src/components/crm/CrmProvider.tsx` | Browser-local CRM state and persistence | **Done** |
+| `src/app/api/send/route.ts` | Render Puck data → personalized HTML → Resend | **Done** |
+| `src/app/api/schedule/route.ts` | Start/list Temporal scheduled-send workflows | **Done** |
+| `src/app/api/schedule/cancel/route.ts` | Signal workflow to cancel | **Done** |
+| `src/lib/resend.ts` | Validated Resend client configuration | **Done** |
+| `src/lib/temporal/client.ts` | Temporal client connection | **Done** |
+| `src/temporal/workflows.ts` | `scheduleEmailWorkflow` (sleep-until + cancel signal) | **Done** |
+| `src/temporal/activities.ts` | `sendEmailActivity` (calls Resend) | **Done** |
+| `src/temporal/worker.ts` | Long-running local worker process | **Done** |
 
 ---
 
@@ -197,6 +214,7 @@ ColumnsBlock: {
 | `RESEND_API_KEY` | API key from resend.com (free tier: 3,000/mo, 100/day) |
 | `RESEND_FROM_EMAIL` | Sender address (default `onboarding@resend.dev` for dev) |
 | `TEMPORAL_ADDRESS` | Temporal server address (default `localhost:7233`) |
+| `TEMPORAL_NAMESPACE` | Temporal namespace (default `default`) |
 
 ---
 
@@ -212,23 +230,25 @@ ColumnsBlock: {
 
 ## 8. Suggested Build Order
 
-1. **Puck config + React Email components** — Button, Text, Image, Divider, Section,
+1. [x] **Puck config + React Email components** — Button, Text, Image, Divider, Section,
    Hero, Columns, Footer.
-2. **Field definitions** — colors, typography, sizing, URLs, content, links (sidebar).
-3. **Live preview** — Puck `onChange` keeps `data` live; canvas updates in real time.
-4. **Editor/preview toggle** — clean full-screen `<Render>` in a fixed-width container.
-5. **Send now** — `/api/send`: Puck data → `@react-email/render` → Resend + status UI.
-6. **Desktop/mobile width toggle** (Tier 2, easy win alongside preview container).
-7. **Temporal scheduling** — workflow + worker + schedule/cancel/list UI.
-8. **Tier 3 QoL** — VariablePicker + substitution, templates, test-send, undo/redo, etc.
+2. [x] **Field definitions** — colors, typography, sizing, URLs, content, links (sidebar).
+3. [x] **Live preview data** — Puck `onChange` keeps `data` live.
+4. [x] **Editor/preview toggle** — read-only render in desktop/mobile iframes.
+5. [x] **Send now** — `/api/send`: Puck data → static HTML → Resend + status UI.
+6. [x] **Desktop/mobile preview** — 600px and 375px iframe viewports.
+7. [x] **Temporal scheduling** — workflow + worker + schedule/cancel/list UI.
+8. [ ] **Tier 3 QoL** — VariablePicker + substitution, templates, test-send, undo/redo, etc.
+
+Additional completed QoL: browser-local draft persistence, undo/redo, CRM contact
+management, recipient membership indicators, and server-side token substitution.
 
 ---
 
 ## 9. Open Questions / To Decide Later
-- Where to store scheduled-send metadata (Vercel KV / SQLite / JSON) for the
-  "scheduled email list" + cancellation UI.
-- Whether to render the email via Puck's `<Render>` (accepts wrapper `div`s — fine for
-  most clients) or walk `data.content` to emit pure table-based React Email markup
-  (purist option) if output looks off in a real client.
-- Hosting target for the Temporal worker when deploying (Railway / Fly.io / Render).
-- Variables data model for personalization (per-recipient values vs. single test set).
+- Rendering decision: use Puck's `<Render>` with the full `EmailLayout` outside edit
+  mode; revisit only if real-client testing exposes markup compatibility issues.
+- If deployed scheduling is added later, choose Temporal Cloud plus an always-on
+  worker host (Railway / Fly.io / Render).
+- If CRM data must be shared across users/devices later, replace browser storage
+  with a persistent database.
