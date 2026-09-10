@@ -29,6 +29,7 @@ export const PUCK_VIEWPORTS: Viewports = [
  * Map a Puck canvas width back to a preview viewport. Widths at or below the
  * mobile breakpoint preview as mobile; anything wider previews as desktop.
  */
-export function viewportForWidth(width: number): PreviewViewport {
+export function viewportForWidth(width: number | "100%"): PreviewViewport {
+  if (width === "100%") return "desktop";
   return width <= PREVIEW_VIEWPORTS.mobile.width ? "mobile" : "desktop";
 }
