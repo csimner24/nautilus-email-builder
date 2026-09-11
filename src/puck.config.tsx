@@ -1,5 +1,11 @@
 import * as React from "react";
-import type { Config, Data, Slot } from "@puckeditor/core";
+import type {
+  Config,
+  Data,
+  Fields,
+  Slot,
+  SlotComponent,
+} from "@puckeditor/core";
 import { EmailLayout } from "@/components/email/EmailLayout";
 import {
   ButtonBlock,
@@ -16,6 +22,7 @@ import {
   ImageBlock,
   imageBlockDefaults,
   MAX_COLUMNS,
+  MAX_NESTED_COLUMNS,
   MIN_COLUMNS,
   SectionBlock,
   sectionBlockDefaults,
@@ -40,10 +47,12 @@ type SectionEditorProps = Omit<SectionBlockProps, "children"> & {
 
 type ColumnsEditorProps = Omit<ColumnsBlockProps, "cells"> & {
   columns: number;
-  col1: Slot;
-  col2: Slot;
-  col3: Slot;
-  col4: Slot;
+  // Optional because only the declared column count is exposed as a field;
+  // see `columnsFields`.
+  col1?: Slot;
+  col2?: Slot;
+  col3?: Slot;
+  col4?: Slot;
 };
 
 export type EmailComponentProps = {
@@ -99,8 +108,100 @@ const booleanOptions = [
   { label: "No", value: false },
 ] as const;
 
+const columnSlotKeys = ["col1", "col2", "col3", "col4"] as const;
+
+/**
+ * Nesting depth of the Columns block currently rendering: 0 at the email root,
+ * 1 inside a top-level column, and so on.
+ */
+const ColumnDepthContext = React.createContext(0);
+
+/**
+ * A slot is declared as data (`Slot`) but arrives at render as the component
+ * Puck builds for it, so the renderer's props differ from the editor's.
+ */
+type ColumnsRenderProps = Omit<
+  ColumnsEditorProps,
+  (typeof columnSlotKeys)[number]
+> & {
+  col1?: SlotComponent;
+  col2?: SlotComponent;
+  col3?: SlotComponent;
+  col4?: SlotComponent;
+};
+
+function ColumnsRenderer({
+  columns,
+  col1,
+  col2,
+  col3,
+  col4,
+  gap,
+  stackOnMobile,
+}: ColumnsRenderProps) {
+  const depth = React.useContext(ColumnDepthContext);
+  // A nested Columns block is capped at two columns. Three or more inside an
+  // already-narrow cell is the shape that breaks the renderer, so clamp here
+  // as well as in `findColumnRuleViolation` — a draft restored from storage
+  // reaches this render without passing through the editor's change guard.
+  const count = Math.min(
+    clampColumnCount(columns),
+    depth > 0 ? MAX_NESTED_COLUMNS : MAX_COLUMNS,
+  );
+
+  // Four slots always exist so content survives a column-count change;
+  // only the first `count` of them are rendered.
+  const slots = [col1, col2, col3, col4];
+  const cells = slots
+    .slice(0, count)
+    .map((Cell, index) =>
+      Cell ? <Cell key={index} minEmptyHeight={64} /> : null,
+    );
+
+  return (
+    <ColumnDepthContext.Provider value={depth + 1}>
+      <ColumnsBlock gap={gap} stackOnMobile={stackOnMobile} cells={cells} />
+    </ColumnDepthContext.Provider>
+  );
+}
+
+/**
+ * Fields for a Columns block, exposing exactly `count` slots in ascending
+ * order.
+ *
+ * All four slots stay in the data so content survives a column-count change,
+ * but Puck derives both the properties panel and the outline from the declared
+ * fields — so columns beyond the count stay out of both.
+ */
+function columnsFields(count: number): Fields<ColumnsEditorProps> {
+  const slotFields = Object.fromEntries(
+    columnSlotKeys.slice(0, count).map((key) => [key, { type: "slot" }]),
+  ) as Pick<Fields<ColumnsEditorProps>, (typeof columnSlotKeys)[number]>;
+
+  return {
+    columns: {
+      type: "number",
+      label: "Columns",
+      min: MIN_COLUMNS,
+      max: MAX_COLUMNS,
+    },
+    ...slotFields,
+    gap: {
+      type: "number",
+      label: "Gap (px)",
+      min: 0,
+      max: 64,
+    },
+    stackOnMobile: {
+      type: "radio",
+      label: "Stack on mobile",
+      options: booleanOptions,
+    },
+  };
+}
+
 const rootDefaults: EmailRootProps = {
-  backgroundColor: theme.color.background,
+  backgroundColor: theme.color.surface,
   contentWidth: theme.contentWidth,
   fontFamily: theme.font.family,
   preheader: "",
@@ -178,29 +279,9 @@ export const config: Config<EmailComponentProps, EmailRootProps> = {
     },
     ColumnsBlock: {
       label: "Columns",
-      fields: {
-        columns: {
-          type: "number",
-          label: "Columns",
-          min: MIN_COLUMNS,
-          max: MAX_COLUMNS,
-        },
-        col1: { type: "slot" },
-        col2: { type: "slot" },
-        col3: { type: "slot" },
-        col4: { type: "slot" },
-        gap: {
-          type: "number",
-          label: "Gap (px)",
-          min: 0,
-          max: 64,
-        },
-        stackOnMobile: {
-          type: "radio",
-          label: "Stack on mobile",
-          options: booleanOptions,
-        },
-      },
+      fields: columnsFields(MIN_COLUMNS),
+      resolveFields: (data) =>
+        columnsFields(clampColumnCount(data.props.columns)),
       defaultProps: {
         ...columnsBlockDefaults,
         columns: MIN_COLUMNS,
@@ -209,22 +290,17 @@ export const config: Config<EmailComponentProps, EmailRootProps> = {
         col3: [],
         col4: [],
       },
-      render: ({ columns, col1, col2, col3, col4, gap, stackOnMobile }) => {
-        // Four slots always exist so content survives a column-count change;
-        // only the first `columns` of them are rendered.
-        const slots = [col1, col2, col3, col4];
-        const cells = slots
-          .slice(0, clampColumnCount(columns))
-          .map((SlotComponent, index) => <SlotComponent key={index} />);
-
-        return (
-          <ColumnsBlock
-            gap={gap}
-            stackOnMobile={stackOnMobile}
-            cells={cells}
-          />
-        );
-      },
+      render: ({ columns, col1, col2, col3, col4, gap, stackOnMobile }) => (
+        <ColumnsRenderer
+          columns={columns}
+          col1={col1}
+          col2={col2}
+          col3={col3}
+          col4={col4}
+          gap={gap}
+          stackOnMobile={stackOnMobile}
+        />
+      ),
     },
     DividerBlock: {
       label: "Divider",
@@ -330,11 +406,14 @@ export const config: Config<EmailComponentProps, EmailRootProps> = {
       return (
         <>
           <style dangerouslySetInnerHTML={{ __html: responsiveCss }} />
+          {/*
+            Half the canvas rather than all of it: an empty email starts as a
+            compact card and the drop target grows with the content added.
+          */}
           <div
             style={{
-              minHeight: "100%",
-              padding: theme.space[3],
-              backgroundColor: theme.color.surface,
+              minHeight: "50vh",
+              backgroundColor,
               boxSizing: "border-box",
             }}
           >
@@ -343,9 +422,8 @@ export const config: Config<EmailComponentProps, EmailRootProps> = {
               style={{
                 width: `${contentWidth}px`,
                 maxWidth: "100%",
-                minHeight: 320,
                 margin: "0 auto",
-                backgroundColor: theme.color.surface,
+                backgroundColor: "transparent",
                 color: theme.color.text,
                 fontFamily,
               }}

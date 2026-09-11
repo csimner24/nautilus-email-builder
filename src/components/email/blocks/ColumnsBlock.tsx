@@ -5,6 +5,17 @@ import { theme } from "../theme";
 export const MIN_COLUMNS = 2;
 export const MAX_COLUMNS = 4;
 
+/**
+ * Column cap for a Columns block nested inside another column's cell.
+ *
+ * Splitting an already-narrow cell three or more ways is unsupported, so
+ * nesting stays binary however deep it goes.
+ */
+export const MAX_NESTED_COLUMNS = 2;
+
+/** A column's cell may hold at most this many Columns blocks. */
+export const MAX_COLUMNS_BLOCKS_PER_CELL = 1;
+
 const MIN_GAP = 0;
 const MAX_GAP = 64;
 

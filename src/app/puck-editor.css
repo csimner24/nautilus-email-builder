@@ -1,6 +1,8 @@
 .nautilus-puck-shell {
   --nautilus-border: #eaeaea;
-  --nautilus-canvas: #fafafa;
+  /* One continuous surface: shell, canvas, and frame share this color so the
+     email is not framed by nested boxes. */
+  --nautilus-canvas: #ffffff;
   --nautilus-hover: #f2f2f2;
   --nautilus-muted: #666666;
   --nautilus-text: #171717;
@@ -26,22 +28,54 @@
   border-color: var(--nautilus-border);
 }
 
+/*
+ * The canvas, its scroll root, and the frame holding the email all share one
+ * background so the email is not ringed by nested boxes. Puck names the frame
+ * element "PuckPreview-frame", so that prefix is matched too.
+ */
+.nautilus-puck-shell [class*="PuckCanvas_"],
 .nautilus-puck-shell [class*="PuckCanvas-inner"],
-.nautilus-puck-shell [class*="PuckCanvas-root"] {
+.nautilus-puck-shell [class*="PuckCanvas-root"],
+.nautilus-puck-shell [class*="PuckPreview"] {
   background: var(--nautilus-canvas);
 }
 
-.nautilus-puck-shell [class*="PuckCanvas-frame"] {
-  background: #ffffff;
-  border: 1px solid var(--nautilus-border);
-  border-radius: 6px;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    0 8px 24px rgba(0, 0, 0, 0.04);
+/*
+ * Puck paints every empty or selected drop zone blue, which leaves a blank
+ * email showing a stray blue box before anything is added. The highlight is
+ * hidden at rest and brought back on hover, so a drop target still announces
+ * itself when the cursor reaches it.
+ *
+ * These selectors are not scoped to `.nautilus-puck-shell`: the canvas renders
+ * inside an iframe that Puck seeds with the host page's stylesheets, and the
+ * shell class exists only in the host document. `[data-puck-entry]` sits above
+ * the drop zones in both documents, and its `data-puck-dragging` attribute
+ * keeps Puck's drag-time feedback untouched.
+ */
+[data-puck-entry]:not([data-puck-dragging]) [class*="DropZone--isAreaSelected"],
+[data-puck-entry]:not([data-puck-dragging])
+  [class*="DropZone--hoveringOverArea"],
+[data-puck-entry]:not([data-puck-dragging]) [class*="DropZone"]:empty {
+  background: transparent;
+  outline: none;
 }
 
-.nautilus-puck-shell [class*="PuckCanvas-frame"] iframe {
-  background: #ffffff;
+[data-puck-entry]:not([data-puck-dragging])
+  [class*="DropZone--isAreaSelected"]:hover,
+[data-puck-entry]:not([data-puck-dragging])
+  [class*="DropZone--hoveringOverArea"]:hover,
+[data-puck-entry]:not([data-puck-dragging]) [class*="DropZone"]:empty:hover {
+  background: color-mix(in srgb, var(--puck-color-azure-09) 30%, transparent);
+  outline: 2px dashed var(--puck-color-azure-08);
+}
+
+.nautilus-puck-shell [class*="PuckPreview-frame"] {
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  outline: 1px solid #eaeaea;
+  outline-offset: -1px;
+  overflow: hidden;
 }
 
 .nautilus-puck-shell [class*="SidebarSection-"],
@@ -129,16 +163,18 @@
  */
 .nautilus-puck-shell [class*="PuckCanvas-controls"] {
   align-items: center;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
+  justify-content: center;
+  gap: 4px;
   min-height: 38px;
+  position: relative;
 }
 
 .nautilus-puck-shell
   [class*="PuckCanvas-controls"]
   > [class*="ViewportControls"] {
-  grid-column: 2;
-  justify-self: center;
+  display: flex;
+  align-items: center;
 }
 
 /* Keep viewport and +/- controls, but remove Puck's percentage dropdown. */
@@ -146,12 +182,16 @@
   display: none !important;
 }
 
+/* Sits right of the viewport +/- controls in the center of the bar. */
+.nautilus-start-over {
+  display: flex;
+}
+
 .nautilus-selection-toolbar {
-  grid-column: 3;
-  justify-self: end;
   min-width: 0;
-  padding-left: 12px;
-  position: relative;
+  padding-right: 12px;
+  position: absolute;
+  right: 0;
   z-index: 2;
 }
 
@@ -166,7 +206,7 @@
  */
 .nautilus-page-preview {
   --nautilus-preview-header-height: 56px;
-  background: #fafafa;
+  background: #ffffff;
   color: #171717;
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
@@ -196,6 +236,87 @@
   margin: 0;
 }
 
+.nautilus-preview-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.nautilus-recipient-view {
+  position: relative;
+}
+
+.nautilus-recipient-popup-overlay {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.34);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 9999;
+}
+
+.nautilus-recipient-popup {
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+  padding: 24px;
+  width: 100%;
+}
+
+.nautilus-recipient-popup h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.nautilus-recipient-popup p {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.nautilus-recipient-popup input {
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  color: #171717;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nautilus-recipient-popup input:focus {
+  border-color: #171717;
+  outline: 2px solid #171717;
+  outline-offset: 2px;
+}
+
+.nautilus-recipient-popup-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.nautilus-recipient-popup-primary {
+  background: #171717 !important;
+  color: #ffffff !important;
+}
+
+.nautilus-recipient-error {
+  color: #b42318;
+  font-size: 13px;
+  margin: 0;
+}
+
 .nautilus-preview-header button {
   background: #ffffff;
   border: 1px solid #eaeaea;
@@ -221,26 +342,67 @@
   outline-offset: 2px;
 }
 
+/*
+ * The email's x-axis is fixed (600px desktop / 375px mobile) and goes fluid
+ * below 600px, so the frame is capped to the pane instead of scrolling
+ * sideways. Vertical scrolling is expected; horizontal never is.
+ */
 .nautilus-preview-surface {
   box-sizing: border-box;
   min-height: calc(100vh - var(--nautilus-preview-header-height));
-  overflow-x: auto;
+  overflow-x: hidden;
   padding: 24px;
 }
 
+/* `text-align` centers the inline-block tape wrapper below. */
 .nautilus-preview-stage {
   margin: 0 auto;
-  width: max-content;
+  max-width: 100%;
+  text-align: center;
+  width: auto;
 }
 
+/* Thin outline matching the editor canvas frame. */
+.nautilus-preview-tape {
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  box-sizing: border-box;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Height is measured from the document inside the frame; see EmailPreview. */
 .nautilus-preview-frame {
   background: #ffffff;
-  border: 1px solid #eaeaea;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  box-sizing: content-box;
+  border: none;
+  border-radius: 8px;
+  box-sizing: border-box;
   display: block;
-  height: 900px;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+/*
+ * Transient banner for an edit the column rules rejected. It floats above the
+ * editor because the change never reached the canvas to be annotated in place.
+ */
+.nautilus-edit-error {
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  color: #b42318;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-size: 14px;
+  left: 50%;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 14px;
+  position: fixed;
+  top: 72px;
+  transform: translateX(-50%);
+  z-index: 9500;
 }
 
 .nautilus-crash-notice {
@@ -402,6 +564,7 @@
 }
 
 .send-dialog__form input,
+.send-dialog__form select,
 .send-dialog__form textarea {
   background: #ffffff;
   border: 1px solid #d4d4d4;
@@ -414,6 +577,7 @@
 }
 
 .send-dialog__form input:focus,
+.send-dialog__form select:focus,
 .send-dialog__form textarea:focus,
 .send-dialog button:focus-visible {
   border-color: #171717;
@@ -500,15 +664,22 @@
 }
 
 .send-dialog__schedules,
-.send-dialog__contacts {
+.send-dialog__contacts,
+.project-dialog__section {
   border-top: 1px solid #eaeaea;
   margin-top: 22px;
   padding-top: 18px;
 }
 
 .send-dialog__section-heading h3,
-.send-dialog__contacts h3 {
+.send-dialog__contacts h3,
+.project-dialog__section h3 {
   font-size: 14px;
+}
+
+/* Direct child only: a heading inside `__section-heading` is a flex item. */
+.project-dialog__section > h3 {
+  margin: 0 0 14px;
 }
 
 .send-dialog__section-heading button,

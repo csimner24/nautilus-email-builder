@@ -3,16 +3,7 @@ import { Render } from "@puckeditor/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { config, type EmailData } from "@/puck.config";
 import type { PersonalizationAttributes } from "@/lib/email";
-import { substituteVariables } from "@/lib/variables";
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+import { personalizeHtml } from "@/lib/variables";
 
 export function renderPersonalizedEmail(
   data: EmailData,
@@ -31,15 +22,5 @@ export function renderPersonalizedEmail(
     <Render config={config} data={data} />,
   )}`;
 
-  // Substitution runs over the whole rendered document, so a `{{token}}` is
-  // replaced wherever it lands. Values are HTML-escaped, which is correct for
-  // text and quoted attributes but NOT for a token used as a bare URL or
-  // inside a <script>/<style> body; email blocks never emit those.
-  const escapedAttributes = Object.fromEntries(
-    Object.entries(attributes).map(([key, value]) => [
-      key,
-      value === undefined ? undefined : escapeHtml(value),
-    ]),
-  );
-  return substituteVariables(html, escapedAttributes);
+  return personalizeHtml(html, attributes);
 }

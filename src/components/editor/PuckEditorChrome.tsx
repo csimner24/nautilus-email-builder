@@ -65,9 +65,11 @@ function RedoIcon() {
 function HistoryAndPageActions({
   onViewPage,
   onSend,
+  onOpenProjects,
 }: {
   onViewPage: (viewport: PreviewViewport) => void;
   onSend: () => void;
+  onOpenProjects: () => void;
 }) {
   const back = useEmailPuck((state) => state.history.back);
   const forward = useEmailPuck((state) => state.history.forward);
@@ -102,6 +104,9 @@ function HistoryAndPageActions({
         onClick={() => onViewPage(viewportForWidth(viewportWidth))}
       >
         View Page
+      </Button>
+      <Button variant="secondary" onClick={onOpenProjects}>
+        Save/Load
       </Button>
       <Button variant="primary" onClick={onSend}>
         Send
@@ -159,15 +164,31 @@ function SelectionToolbar() {
   );
 }
 
+function StartOverButton({ onStartOver }: { onStartOver: () => void }) {
+  return (
+    <div className="nautilus-start-over">
+      <IconButton type="button" title="Start over" onClick={onStartOver}>
+        <TrashIcon />
+      </IconButton>
+    </div>
+  );
+}
+
 /**
- * Hosts the editor and portals the selection actions into Puck's canvas
- * control band.
+ * Hosts the editor and portals the start-over and selection actions into
+ * Puck's canvas control band.
  *
  * Puck exposes no child slot there, so the band is located by its CSS module
  * class name. That couples this to Puck's internals: if the class is renamed
  * in a future release the portal simply no-ops and the editor still works.
  */
-function EditorShell({ children }: { children: React.ReactNode }) {
+function EditorShell({
+  children,
+  onStartOver,
+}: {
+  children: React.ReactNode;
+  onStartOver: () => void;
+}) {
   const shellRef = React.useRef<HTMLDivElement>(null);
   const [controlsHost, setControlsHost] = React.useState<Element | null>(null);
 
@@ -201,7 +222,15 @@ function EditorShell({ children }: { children: React.ReactNode }) {
   return (
     <div ref={shellRef} className="nautilus-puck-shell">
       {children}
-      {controlsHost ? createPortal(<SelectionToolbar />, controlsHost) : null}
+      {controlsHost
+        ? createPortal(
+            <>
+              <StartOverButton onStartOver={onStartOver} />
+              <SelectionToolbar />
+            </>,
+            controlsHost,
+          )
+        : null}
     </div>
   );
 }
@@ -209,12 +238,20 @@ function EditorShell({ children }: { children: React.ReactNode }) {
 export function createEditorOverrides(
   onViewPage: (viewport: PreviewViewport) => void,
   onSend: () => void,
+  onOpenProjects: () => void,
+  onStartOver: () => void,
 ): Partial<Overrides<typeof config>> {
   return {
     actionBar: () => <></>,
     headerActions: () => (
-      <HistoryAndPageActions onViewPage={onViewPage} onSend={onSend} />
+      <HistoryAndPageActions
+        onViewPage={onViewPage}
+        onSend={onSend}
+        onOpenProjects={onOpenProjects}
+      />
     ),
-    puck: ({ children }) => <EditorShell>{children}</EditorShell>,
+    puck: ({ children }) => (
+      <EditorShell onStartOver={onStartOver}>{children}</EditorShell>
+    ),
   };
 }

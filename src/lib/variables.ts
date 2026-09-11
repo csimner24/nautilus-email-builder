@@ -38,3 +38,36 @@ export function substituteVariables(
     return onMissing === "keep" ? whole : "";
   });
 }
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/**
+ * Substitute `{{tokens}}` into an already-rendered HTML document.
+ *
+ * Substitution runs over the whole document, so a token is replaced wherever
+ * it lands. Values are HTML-escaped, which is correct for text and quoted
+ * attributes but NOT for a token used as a bare URL or inside a
+ * `<script>`/`<style>` body; email blocks never emit those.
+ *
+ * Shared by the send path and the in-editor recipient preview so both show
+ * the same result.
+ */
+export function personalizeHtml(
+  html: string,
+  attributes: Record<string, string | undefined>,
+): string {
+  const escapedAttributes = Object.fromEntries(
+    Object.entries(attributes).map(([key, value]) => [
+      key,
+      value === undefined ? undefined : escapeHtml(value),
+    ]),
+  );
+  return substituteVariables(html, escapedAttributes);
+}

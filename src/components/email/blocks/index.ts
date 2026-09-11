@@ -23,6 +23,8 @@ export {
   clampColumnCount,
   MIN_COLUMNS,
   MAX_COLUMNS,
+  MAX_NESTED_COLUMNS,
+  MAX_COLUMNS_BLOCKS_PER_CELL,
 } from "./ColumnsBlock";
 export type { ColumnsBlockProps } from "./ColumnsBlock";
 

@@ -30,7 +30,7 @@ export const footerBlockDefaults = {
     { label: "Twitter", href: "https://twitter.com" },
     { label: "LinkedIn", href: "https://linkedin.com" },
   ],
-  bgColor: theme.color.background,
+  bgColor: "transparent",
   textColor: theme.color.textMuted,
 } as const satisfies FooterBlockProps;
 

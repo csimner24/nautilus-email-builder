@@ -35,7 +35,7 @@ export function Sample() {
           align="center"
         />
         <TextBlock
-          content="Hi <strong>{{firstName}} {{lastName}}</strong>, thanks for joining us. We noticed you're from <strong>{{hometown}}</strong> — we've got something special planned for your birthday on <strong>{{birthday}}</strong>."
+          content="Hi <strong>{{firstName}} {{lastName}}</strong>, thanks for joining us. We noticed you're from <strong>{{location}}</strong> — we've got something special planned for your birthday on <strong>{{birthday}}</strong>."
           align="center"
         />
       </SectionBlock>

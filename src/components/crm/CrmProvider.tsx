@@ -23,7 +23,7 @@ function isContact(value: unknown): value is Contact {
     typeof contact.firstName === "string" &&
     typeof contact.lastName === "string" &&
     typeof contact.birthday === "string" &&
-    typeof contact.hometown === "string"
+    typeof contact.location === "string"
   );
 }
 

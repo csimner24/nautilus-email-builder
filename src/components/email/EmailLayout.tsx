@@ -33,7 +33,7 @@ export function EmailLayout({
   fontFamily,
   children,
 }: EmailLayoutProps) {
-  const bg = backgroundColor ?? defaultTheme.color.background;
+  const bg = backgroundColor ?? defaultTheme.color.surface;
   const width = contentWidth ?? defaultTheme.contentWidth;
   const font = fontFamily ?? defaultTheme.font.family;
 
@@ -68,7 +68,9 @@ export function EmailLayout({
             width: `${width}px`,
             maxWidth: "100%",
             margin: "0 auto",
-            backgroundColor: defaultTheme.color.surface,
+            // Transparent so the page background reads as one continuous
+            // surface; the container only constrains width.
+            backgroundColor: "transparent",
           }}
         >
           {children}

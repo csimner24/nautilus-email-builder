@@ -2,20 +2,16 @@
 
 import * as React from "react";
 import type { EmailData } from "@/puck.config";
+import { ContactForm } from "@/components/crm/ContactForm";
 import { useCrm } from "@/components/crm/CrmProvider";
+import { useDialogFocusTrap } from "@/components/ui/useDialogFocusTrap";
 import { ApiError, describeRequestError, requestJson } from "@/lib/api-client";
-import { contactAttributes, type Contact } from "@/lib/crm";
+import { contactAttributes } from "@/lib/crm";
 import { isValidEmail, normalizeEmail, parseRecipientList } from "@/lib/email";
 import type { ScheduledEmail } from "@/temporal/types";
 
 type Tab = "now" | "scheduled" | "crm";
 type Notice = { kind: "success" | "error"; message: string } | null;
-type ContactField =
-  | "email"
-  | "firstName"
-  | "lastName"
-  | "birthday"
-  | "hometown";
 
 interface SendDialogProps {
   data: EmailData;
@@ -23,43 +19,11 @@ interface SendDialogProps {
   onClose: () => void;
 }
 
-const EMPTY_CONTACT: Contact = {
-  email: "",
-  firstName: "",
-  lastName: "",
-  birthday: "",
-  hometown: "",
-};
-
 const TABS: { value: Tab; label: string }[] = [
   { value: "now", label: "Send now" },
   { value: "scheduled", label: "Scheduled send" },
   { value: "crm", label: "CRM" },
 ];
-
-const CONTACT_FIELDS: { key: ContactField; label: string }[] = [
-  { key: "email", label: "Email" },
-  { key: "firstName", label: "First name" },
-  { key: "lastName", label: "Last name" },
-  { key: "birthday", label: "Birthday" },
-  { key: "hometown", label: "Hometown" },
-];
-
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(", ");
-
-/** Elements inside `container` that can currently receive keyboard focus. */
-function focusableWithin(container: HTMLElement): HTMLElement[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-  ).filter((element) => element.tabIndex >= 0);
-}
 
 /** Scheduling is offline only when the API says so, or never answered at all. */
 function isSchedulingOffline(error: unknown): boolean {
@@ -98,15 +62,14 @@ function NoticeBanner({ notice }: { notice: Notice }) {
 }
 
 export function SendDialog({ data, open, onClose }: SendDialogProps) {
-  const { contacts, getContact, upsertContact, variableKeys } = useCrm();
-  const cardRef = React.useRef<HTMLDivElement>(null);
+  const { contacts, getContact, variableKeys } = useCrm();
+  const cardRef = useDialogFocusTrap(open, onClose);
   const [tab, setTab] = React.useState<Tab>("now");
   const [recipient, setRecipient] = React.useState("");
   const [subject, setSubject] = React.useState("");
   const [recipientsText, setRecipientsText] = React.useState("");
   const [scheduledSubject, setScheduledSubject] = React.useState("");
   const [sendAt, setSendAt] = React.useState("");
-  const [contact, setContact] = React.useState<Contact>(EMPTY_CONTACT);
   const [notice, setNotice] = React.useState<Notice>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [scheduled, setScheduled] = React.useState<ScheduledEmail[]>([]);
@@ -132,50 +95,8 @@ export function SendDialog({ data, open, onClose }: SendDialogProps) {
   }, []);
 
   React.useEffect(() => {
-    if (!open) return;
-    setNotice(null);
-
-    const previouslyFocused =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const frame = requestAnimationFrame(() => {
-      const card = cardRef.current;
-      if (card) focusableWithin(card)[0]?.focus();
-    });
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !cardRef.current) return;
-
-      const focusable = focusableWithin(cardRef.current);
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, [onClose, open]);
+    if (open) setNotice(null);
+  }, [open]);
 
   React.useEffect(() => {
     if (open && tab === "scheduled") void loadScheduled();
@@ -309,17 +230,6 @@ export function SendDialog({ data, open, onClose }: SendDialogProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const saveContact = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!isValidEmail(contact.email)) {
-      setNotice({ kind: "error", message: "Enter a valid CRM email." });
-      return;
-    }
-    upsertContact(contact);
-    setContact(EMPTY_CONTACT);
-    setNotice({ kind: "success", message: "CRM contact saved." });
   };
 
   return (
@@ -526,29 +436,16 @@ export function SendDialog({ data, open, onClose }: SendDialogProps) {
               aria-labelledby="send-tab-crm"
             >
               <div className="send-dialog__crm-layout">
-                <form className="send-dialog__form" onSubmit={saveContact}>
-                  <div className="send-dialog__field-grid">
-                    {CONTACT_FIELDS.map(({ key, label }) => (
-                      <label key={key}>
-                        {label}
-                        <input
-                          type={key === "email" ? "email" : "text"}
-                          value={contact[key]}
-                          onChange={(event) =>
-                            setContact((current) => ({
-                              ...current,
-                              [key]: event.target.value,
-                            }))
-                          }
-                          required
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <button className="send-dialog__primary" type="submit">
-                    Save contact
-                  </button>
-                </form>
+                <ContactForm
+                  onError={(message) => setNotice({ kind: "error", message })}
+                  onInteract={() => setNotice(null)}
+                  onSaved={() =>
+                    setNotice({
+                      kind: "success",
+                      message: "CRM contact saved.",
+                    })
+                  }
+                />
                 <section
                   className="send-dialog__contacts"
                   aria-labelledby="contacts-title"
